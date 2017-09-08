@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# but these files
+!.gitignore
+!Makefile
+!*.cpp
+!*.hpp
+!*.c
+!*.h
+!notes
+!LICENCE
+!README.md
