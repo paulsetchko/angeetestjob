@@ -4,7 +4,9 @@
 #include <pthread.h>
 #include <iostream>
 #include <fstream>
+#include <limits>
 #include <curl/curl.h>
+#include <sys/stat.h>
 #include <sstream>
 #include <vector>
 #include <algorithm>
@@ -71,6 +73,12 @@ void *curl_getfile(void *args) {
   return NULL;
 }
 
+void get_filesize(RemoteFile::RemoteFile& unit, const std::string& filename) {
+  struct stat st;
+  stat(filename.c_str(), &st);
+  unit.setSize(st.st_size);
+}
+
 void fill_url_vector(const char *filename,
                      const char *addr,
                      std::vector<RemoteFile::RemoteFile>& files) {
@@ -134,6 +142,8 @@ void fill_url_vector(const char *filename,
 int main(int argc, char *argv[]) {
   const char *pagefilename = "page.out";
   int error, j = 0;
+  int max = 0, min = std::numeric_limits<int>::max();
+  uint8_t min_index = 0, max_index = 0;
   std::string line;
   std::ifstream myfile(pagefilename);
   std::string temp;
@@ -174,7 +184,21 @@ int main(int argc, char *argv[]) {
   }
 
   for (uint16_t i = 0; i < remotefiles.size(); ++i) {
-    error = pthread_join(tid[i], NULL);
+    pthread_join(tid[i], NULL);
+    get_filesize(remotefiles[i], std::to_string(i));
+  }
+
+  j = 0;
+
+  for (auto i = remotefiles.begin(); i != remotefiles.end(); ++i, ++j) {
+    if (min > (*i).getSize()) {
+      min_index = j;
+      min = (*i).getSize();
+    }
+    if (max < (*i).getSize()) {
+      max_index = j;
+      max = (*i).getSize();
+    }
   }
 
   j = 0;
@@ -183,8 +207,15 @@ int main(int argc, char *argv[]) {
     get_adler32(std::to_string(j), temp);
     (*i).setHash(temp);
     temp.erase();
-    std::cout << (*i).getHash() << std::endl;
+    std::cout << (*i).getUrl() << " " << (*i).getHash() << std::endl;
   }
+
+  std::cout << std::endl << "The biggest file is:" << std::endl
+            << remotefiles[max_index].getUrl() << std::endl
+            << std::endl << "The smallest file is:" << std::endl
+            << remotefiles[min_index].getUrl() << std::endl;
+
+  curl_global_cleanup();
 
   return 0;
 }
