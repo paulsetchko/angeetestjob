@@ -46,6 +46,11 @@ RemoteFile::RemoteFile(std::string& input): url(input) {
 RemoteFile::~RemoteFile() {
 }
 
+struct thread_args {
+  std::string url;
+  std::string filename;
+};
+
 NAMESPACE_END
 
 #endif

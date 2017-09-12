@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <iostream>
 #include <fstream>
 #include <curl/curl.h>
@@ -13,8 +14,6 @@
 #include <crypto++/hex.h>
 #include <crypto++/filters.h>
 #include "remote.hpp"
-
-CURL *curl_handle;
 
 void get_adler32(const std::string filename, std::string& sink) {
   CryptoPP::Adler32 hashAdler32;
@@ -30,26 +29,30 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
   return written;
 }
 
-void curl_setup() {
-  curl_global_init(CURL_GLOBAL_ALL);
+void *curl_getfile(void *args) {
+  CURL *curl_handle;
+  RemoteFile::thread_args *temp = (RemoteFile::thread_args *)args;
+  FILE *desc = fopen(temp->filename.c_str(), "wb");
 
-  /* init the curl session */
-  curl_handle = curl_easy_init();
-
-  /* tell libcurl to follow redirection */
-  curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
-
-  /* Switch on full protocol/debug output while testing */
-  //curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
-
-  /* disable progress meter, set to 0L to enable and disable debug output */
-  curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
-}
-
-int curl_getfile(const char *filename) {
-  int ret = 1;
-  FILE *desc = fopen(filename, "wb");
   if (desc) {
+    /* init the curl session */
+    curl_handle = curl_easy_init();
+
+    /* tell libcurl to follow redirection */
+    curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L);
+
+    /* Switch on full protocol/debug output while testing */
+    //curl_easy_setopt(curl_handle, CURLOPT_VERBOSE, 1L);
+
+    /* disable progress meter, set to 0L to enable and disable debug output */
+    curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
+
+    /* set URL to get here */
+    curl_easy_setopt(curl_handle, CURLOPT_URL, temp->url.c_str());
+
+    /* send all data to this function  */
+    curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
+
     /* write the page body to this file handle */
     curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, desc);
 
@@ -59,14 +62,13 @@ int curl_getfile(const char *filename) {
     /* close the header file */
     fclose(desc);
 
-    ret = 0;
+    /* cleanup curl stuff */
+    curl_easy_cleanup(curl_handle);
+
+    delete (RemoteFile::thread_args *)args;
   }
 
-  if (ret) {
-    std::cout << "error with getting a file" << std::endl;
-  }
-
-  return ret;
+  return NULL;
 }
 
 void fill_url_vector(const char *filename,
@@ -131,7 +133,7 @@ void fill_url_vector(const char *filename,
  
 int main(int argc, char *argv[]) {
   const char *pagefilename = "page.out";
-  int j = 0;
+  int error, j = 0;
   std::string line;
   std::ifstream myfile(pagefilename);
   std::string temp;
@@ -143,34 +145,47 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  curl_setup();
- 
-  /* set URL to get here */ 
-  curl_easy_setopt(curl_handle, CURLOPT_URL, argv[1]);
+  curl_global_init(CURL_GLOBAL_ALL);
 
-  /* send all data to this function  */ 
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, write_data);
+  RemoteFile::thread_args *core = new RemoteFile::thread_args();
+  core->url = argv[1];
+  core->filename = pagefilename;
 
-  if (curl_getfile(pagefilename)) {
-    curl_easy_cleanup(curl_handle);
-    return 1;
-  }
+  curl_getfile((void *)core);
 
   /* fill up the files urls and their adler32 hashes*/
   fill_url_vector(pagefilename, argv[1], remotefiles);
 
+  pthread_t tid[remotefiles.size()];
+
   for (auto i = remotefiles.begin(); i != remotefiles.end(); ++i, ++j) {
-    curl_easy_setopt(curl_handle, CURLOPT_URL, (*i).getUrl().c_str());
-    curl_getfile(std::to_string(j).c_str());
+    RemoteFile::thread_args *args = new RemoteFile::thread_args();
+
+    args->url = (*i).getUrl();
+    args->filename = std::to_string(j);
+    
+    error = pthread_create(&tid[j],
+                           NULL,
+                           curl_getfile,
+                           (void *)args);
+    if (0 != error) {
+      delete args;
+    }
+  }
+
+  for (uint16_t i = 0; i < remotefiles.size(); ++i) {
+    error = pthread_join(tid[i], NULL);
+  }
+
+  j = 0;
+
+  for (auto i = remotefiles.begin(); i != remotefiles.end(); ++i, ++j) {
     get_adler32(std::to_string(j), temp);
     (*i).setHash(temp);
     temp.erase();
     std::cout << (*i).getHash() << std::endl;
   }
 
-  /* cleanup curl stuff */
-  curl_easy_cleanup(curl_handle);
- 
   return 0;
 }
 
