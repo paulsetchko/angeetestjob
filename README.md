@@ -16,3 +16,11 @@ to run the compiled binary, execute the line that looks like this one:
 where the url is your desired url you want to parse.
 
 p.s. the parser grab rules should be updated as these rules were tweaked to catch all the link occurances in the proposed url where the urls are located in both the html code with a couple of variations and in some js code as well, so grabbing the urls out of a custom js code might not be an easy problem to solve
+
+to run the compiled binary, execute the line that looks like this one:
+
+./adler32test http://www.meetangee.com/
+
+where the url is your desired url you want to parse.
+
+p.s. the parser grab rules should be updated as these rules were tweaked to catch all the link occurances in the proposed url where the urls are located in both the html code with a couple of variations and in some js code as well, so grabbing the urls out of a custom js code might not be an easy problem to solve
