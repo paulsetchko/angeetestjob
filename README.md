@@ -8,3 +8,5 @@ Pavel must work, and will be judged, on which algorithms, libraries he uses, on 
 To compile the test task code on Ubuntu 16.04, install some additional packages running the following command:
 
 sudo apt-get install g++ libcurl4-openssl-dev libcrypto++-dev
+
+There's a more C++-like code in the second branch, but that branch does not contain the latest fixes that will be uploaded probably never because I've got yet other things to do.
