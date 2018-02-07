@@ -5,7 +5,7 @@
 
 class RemoteFile {
   public:
-//    RemoteFile();
+    RemoteFile();
     RemoteFile(std::string& input);
     ~RemoteFile();
 

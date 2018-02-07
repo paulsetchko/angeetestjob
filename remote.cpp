@@ -25,6 +25,9 @@ const int& RemoteFile::getSize() {
   return size;
 }
 
+RemoteFile::RemoteFile() {
+}
+
 RemoteFile::RemoteFile(std::string& input): url(input) {
 }
 

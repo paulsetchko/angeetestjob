@@ -21,6 +21,11 @@ CurlObj::CurlObj(const std::string& name, const std::string& url):
 }
 
 CurlObj::~CurlObj() {
+/*  std::cout << std::endl << "The biggest file is:" << std::endl
+            << remotefiles[max_index].getUrl() << std::endl
+            << std::endl << "The smallest file is:" << std::endl
+            << remotefiles[min_index].getUrl() << std::endl;
+*/
   curl_global_cleanup();
 }
 
@@ -64,6 +69,8 @@ void *CurlObj::savePage(void *args) {
 
     /* cleanup curl stuff */
     curl_easy_cleanup(curl_handle);
+
+    delete (thread_args *)args;
   }
 
   return NULL;
@@ -148,7 +155,7 @@ void CurlObj::downloadPages(std::vector<RemoteFile>& remotefiles) {
   int max = 0, min = std::numeric_limits<int>::max();
   savePage((void *)(&core));
   fillUrlVector(remotefiles);
-
+  
   pthread_t tid[remotefiles.size()];
 
   for (auto i = remotefiles.begin(); i != remotefiles.end(); ++i, ++j) {
@@ -191,11 +198,5 @@ void CurlObj::downloadPages(std::vector<RemoteFile>& remotefiles) {
     temp.erase();
     std::cout << (*i).getUrl() << " " << (*i).getHash() << std::endl;
   }
-
-  std::cout << std::endl << "The biggest file is:" << std::endl
-            << remotefiles[max_index].getUrl() << std::endl
-            << std::endl << "The smallest file is:" << std::endl
-            << remotefiles[min_index].getUrl() << std::endl;
-
 }
 
