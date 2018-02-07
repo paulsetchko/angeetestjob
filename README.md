@@ -8,3 +8,11 @@ Pavel must work, and will be judged, on which algorithms, libraries he uses, on 
 To compile the test task code on Ubuntu 16.04, install some additional packages running the following command:
 
 sudo apt-get install g++ libcurl4-openssl-dev libcrypto++-dev
+
+to run the compiled binary, execute the line that looks like this one:
+
+./adler32test http://www.meetangee.com/
+
+where the url is your desired url you want to parse.
+
+p.s. the parser grab rules should be updated as these rules were tweaked to catch all the link occurances in the proposed url where the urls are located in both the html code with a couple of variations and in some js code as well, so grabbing the urls out of a custom js code might not be an easy problem to solve
